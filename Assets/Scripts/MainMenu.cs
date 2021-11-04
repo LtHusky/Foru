@@ -7,10 +7,13 @@ using UnityEngine.UI;
 public class MainMenu : MonoBehaviour
 {
     public static bool GameIsPaused;
+    public GameObject fadeImage;
+    public Animator mmAnimator;
 
     public void PlayGame()
     {
-        SceneManager.LoadScene("Game");
+        fadeImage.SetActive(true);
+        mmAnimator.SetTrigger("FadeInMM");
     }
 
     public void QuitGame()

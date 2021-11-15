@@ -15,4 +15,15 @@ public class SliderManager : MonoBehaviour
             pumpScript.SetSliderSpeed(val);
         });
     }
+
+    public void DisableInteraction()
+    {
+        slider.interactable = false;
+        slider.value = 0;
+    }
+
+    public void EnableInteraction()
+    {
+        slider.interactable = true;
+    }
 }

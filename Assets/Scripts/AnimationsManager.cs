@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 
 public class AnimationsManager : MonoBehaviour
 {
@@ -19,7 +20,7 @@ public class AnimationsManager : MonoBehaviour
 
     public void DisableFadingImage()
     {
-        gameObject.SetActive(false);
+        gameObject.GetComponent<Image>().enabled = false;
     }
 
     public void ToGame()

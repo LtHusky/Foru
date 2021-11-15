@@ -2,48 +2,54 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
-using UnityEngine.UI;
 
 public class WheelBehaviour : MonoBehaviour, IDragHandler, IPointerDownHandler, IPointerUpHandler
 {
-    private bool Wheelbeingheld = false;
     public RectTransform Wheel;
-    private float WheelAngle = 0f;
-    private float LastWheelAngle = 0f;
-    private Vector2 center;
-    public float MaxSteerAngle = 200f;
-    public float OutPut;
+
+    bool wheelBeingHeld = false;
+    float wheelAngle = 0f;
+    float lastWheelAngle = 0f;
+    Vector2 center;
+
+    public float maxSteerAngle = 200f;
+    public float output;
+
+    public GameObject skimmerWheel;
     public Pump pumpScript;
 
     void Update()
     {
-        if (!Wheelbeingheld && WheelAngle != 0f)
+        if (!wheelBeingHeld && wheelAngle != 0f)
         {
-            if (0 > Mathf.Abs(WheelAngle))
+            if (0 > Mathf.Abs(wheelAngle))
             {
-                WheelAngle = 0f;
+                wheelAngle = 0f;
             }
-            else if (WheelAngle > 0f)
+            else if (wheelAngle > 0f)
             {
-                WheelAngle -= 0;
+                wheelAngle -= 0;
             }
             else
             {
-                WheelAngle += 0;
+                wheelAngle += 0;
             }
         }
 
-        Wheel.localEulerAngles = new Vector3(0, 0, -MaxSteerAngle * OutPut);
-        OutPut = WheelAngle / MaxSteerAngle;
-        OutPut++;
-        pumpScript.wheelValue = OutPut;
+        Wheel.localEulerAngles = new Vector3(0, 0, -maxSteerAngle * output);
+        output = wheelAngle / maxSteerAngle;
+        output++;
+        pumpScript.wheelValue = output;
+
+        // Rotate Skimmer wheel
+        skimmerWheel.transform.localRotation = Wheel.localRotation;
     }
 
     public void OnPointerDown(PointerEventData data)
     {
-        Wheelbeingheld = true;
+        wheelBeingHeld = true;
         center = RectTransformUtility.WorldToScreenPoint(data.pressEventCamera, Wheel.position);
-        LastWheelAngle = Vector2.Angle(Vector2.up, data.position - center);
+        lastWheelAngle = Vector2.Angle(Vector2.up, data.position - center);
     }
 
     public void OnDrag(PointerEventData data)
@@ -54,21 +60,21 @@ public class WheelBehaviour : MonoBehaviour, IDragHandler, IPointerDownHandler, 
         {
             if (data.position.x > center.x)
             {
-                WheelAngle += NewAngle - LastWheelAngle;
+                wheelAngle += NewAngle - lastWheelAngle;
             }
             else
             {
-                WheelAngle -= NewAngle - LastWheelAngle;
+                wheelAngle -= NewAngle - lastWheelAngle;
             }
         }
 
-        WheelAngle = Mathf.Clamp(WheelAngle, -MaxSteerAngle, MaxSteerAngle);
-        LastWheelAngle = NewAngle;
+        wheelAngle = Mathf.Clamp(wheelAngle, -maxSteerAngle, maxSteerAngle);
+        lastWheelAngle = NewAngle;
     }
 
     public void OnPointerUp(PointerEventData data)
     {
         OnDrag(data);
-        Wheelbeingheld = false;
+        wheelBeingHeld = false;
     }
 }

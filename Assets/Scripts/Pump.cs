@@ -1,5 +1,6 @@
 ﻿using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 using System;
 using System.Collections;
 
@@ -10,6 +11,7 @@ public class Pump : MonoBehaviour
 	public GameObject floatPiece;
 	public BoxCollider floatCol;
 	Vector3 floatColOrigin;
+	bool isAdjustingFloat;
 
 	float inlateGap;
 	public float wheelValue;
@@ -17,15 +19,21 @@ public class Pump : MonoBehaviour
 	// Pump.
 	[Header("Pump")]
 	public float pumpSpeed = 0;
-
 	public float pumpPercentage;
 
 	float[] oilAmounts = { 2000, 2500, 3000, 3500, 4000 };
 	public float startOilInWater = 1000;
 	public float PumpedUpOil;
+
 	float runningPumped = 0;
 	bool pumpOn;
 	bool pumpingWater;
+	bool pumpingOil;
+
+	float pumpTimer;
+	int pumpTimerSeconds;
+	float maxSpeed = 20;
+	float speedDifference;
 
 	// Oil & water.
 	[Header("Oil & water")]
@@ -40,8 +48,6 @@ public class Pump : MonoBehaviour
 	public MeshRenderer waterMatTM;
 	public Shader waterShader;
 
-	public Water2DTool.Water2D_Tool tool;
-
 	public Color endColor_Shallow;
 	public Color endColor_Deep;
 
@@ -50,8 +56,8 @@ public class Pump : MonoBehaviour
 	float startOilHeight;
 
 	float currentTime;
-	float bestTime = 30;
-	float endTime;
+	float bestTime = 70;
+	float endTimeScore;
 	string endTimeString;
 
 	float waterPumped;
@@ -66,9 +72,11 @@ public class Pump : MonoBehaviour
 	public TextMeshProUGUI inlateGapText;
 	public TextMeshProUGUI percentageText;
 	public TextMeshProUGUI pumpSpeedText;
+	public Image oilPercentageFillImage;
 	[Space]
 	public GameObject warningSign;
 	public TextMeshProUGUI warningText;
+	public TextMeshProUGUI contextText;
 	[Space]
 	public TextMeshProUGUI endTimerText;
 	public TextMeshProUGUI endOilText;
@@ -78,28 +86,31 @@ public class Pump : MonoBehaviour
 
 	// Animation.
 	[Header("Animation")]
-	public GameObject fadeImage;
+	public Image fadeImage;
 	public Animator animator;
+
+	[Header("Other scripts")]
+	public SliderManager sliderManagerScript;
+	public SensorOutputManager sensorOutputScript;
+	bool sensorPipeCanStart = true;
 
 	// Setup.
 	void Start()
 	{
-		// Random oil amount.
+		// Randomize oil height
 		int randomIDX = UnityEngine.Random.Range(0, 4);
 		oilHeight = oilHeights[randomIDX];
 		startOilInWater = oilAmounts[randomIDX];
 
 		oilHolder.transform.localScale = new Vector3(oilLayer.transform.localScale.x, oilHeight, oilLayer.transform.localScale.z);
-
 		startOilHeight = oilHeight;
-
 		floatColOrigin = floatCol.center;
 	}
 
 	void FixedUpdate()
 	{
 		TextUpdate();
-		InlateGapSettings();
+		StartCoroutine(InlateGapSettings());
 
 		// Activate oil pump.
 		if (pumpOn && inlateGap > 0)
@@ -107,35 +118,38 @@ public class Pump : MonoBehaviour
 			float tempPumpPercentage = PumpedUpOil / startOilInWater;
 			pumpPercentage = tempPumpPercentage * 100;
 
-			UpdateTimer();
+			UpdateTimers();
 			Oilpump();
 			WaterSettings();
 			PumpSpeedSettings();
 			PumpWater();
+
+			if (sensorPipeCanStart)
+            {
+				sensorOutputScript.StartFlow();
+				sensorPipeCanStart = false;
+			}
+			else if (pumpSpeed == 0)
+            {
+				sensorOutputScript.StopFlow();
+				sensorPipeCanStart = true;
+			}
 		}
 	}
 
-	// UI Buttons.
+	// UI elements.
 	public void SetSliderSpeed(float value)
 	{
-        if (!pumpOn)
-        {
-			pumpOn = true;
-        }
+		pumpOn = true;
 		pumpSpeed = value;
 	}
-	public void PumpOff()
-	{
-		pumpSpeed = 0;
-		pumpOn = false;
-		pumpingWater = false;
-	}
 
-	IEnumerator EnableWarning(string content)
+	IEnumerator EnableWarning(string warning, string context)
     {
 		if (!warningSign.activeSelf)
         {
-			warningText.text = content;
+			warningText.text = warning;
+			contextText.text = context;
 			warningSign.SetActive(true);
 
 			yield return new WaitForSeconds(3);
@@ -144,21 +158,25 @@ public class Pump : MonoBehaviour
 		}
 	}
 
-    public void TextUpdate()
+    void TextUpdate()
 	{
 		float tempThickness = oilHeight * 10;
 		oilLayerThicknessText.text = "Oil thickness: " + tempThickness.ToString("0.0") + "CM";
 		inlateGapText.text = "Inlate gap: " + inlateGap.ToString("0.0") + "CM";
 		percentageText.text = (int)pumpPercentage + "%";
+		oilPercentageFillImage.fillAmount = pumpPercentage / 100;
 		pumpSpeedText.text = "Speed: " + pumpSpeed + " m3/h";
 	}
 
 	// Timer.
-	void UpdateTimer()
+	void UpdateTimers()
     {
 		currentTime += Time.deltaTime;
 		TimeSpan timePlaying = TimeSpan.FromSeconds(currentTime);
 		endTimeString = "Time spent: " + timePlaying.ToString("mm':'ss'.'ff");
+
+		pumpTimer += Time.deltaTime;
+		pumpTimerSeconds = (int)pumpTimer % 60;
 	}
 
 	// Game settings.
@@ -178,7 +196,7 @@ public class Pump : MonoBehaviour
 		}
 	}
 
-	void InlateGapSettings()
+	IEnumerator InlateGapSettings()
 	{
 		float tempHeight = oilHeight * 10;
 
@@ -186,111 +204,71 @@ public class Pump : MonoBehaviour
 		inlateGap *= 2.5f;
 
 		float adjustment = inlateGap / 20;
-		floatCol.center = new Vector3(0, 0, 0.13f + adjustment);
+
+		if (isAdjustingFloat == false)
+        {
+			floatCol.center = new Vector3(0, 0, 0.13f + adjustment);
+		}
 		floatPiece.transform.position = new Vector3(0, gameObject.transform.position.y + adjustment - 0.25f, gameObject.transform.position.z);
 
 		// Check inlate gap settings.
-		if (inlateGap > 1 && inlateGap > tempHeight && pumpSpeed > 0)
+		if (inlateGap > 0.2f && inlateGap > tempHeight && pumpSpeed > 0)
         {
-			//slow down pump!!!
 			if (warningAbleToCall)
 			{
-				StartCoroutine(EnableWarning("Skimmer is pumping water!"));
+				StartCoroutine(EnableWarning("Skimmer is pumping water!", "Cause: Inlate gap is too wide."));
 				pumpingWater = true;
 				warningAbleToCall = false;
 			}
 		}
-		else if (inlateGap <= 2 && pumpSpeed >= 40 && inlateGap > 0)
-        {
-			//slow down pump!!!
-			floatCol.center = new Vector3(0, 0, -0.5f);
-			PumpOff();
-
+		else if (inlateGap <= 2 && pumpSpeed > 40 && inlateGap > 0)
+		{
 			if (warningAbleToCall)
 			{
-				StartCoroutine(EnableWarning("Skimmer is rising out of the water!"));
+				StartCoroutine(EnableWarning("Skimmer is rising out of the water!", "Cause: You are pumping too fast."));
 				warningAbleToCall = false;
 			}
-		}
-        else
-        {
-			floatCol.center = Vector3.Lerp(floatCol.center, floatColOrigin, 1 * Time.deltaTime);
 
+			isAdjustingFloat = true;
+			PumpOff();
+			floatCol.center = new Vector3(0, 0, -0.5f);
+
+			yield return new WaitForSeconds(4);
+			sliderManagerScript.EnableInteraction();
+			isAdjustingFloat = false;
+
+		}
+        else if (pumpSpeed == 0 || pumpingWater)
+        {
+			floatCol.center = Vector3.Lerp(floatCol.center, floatColOrigin, 0.5f * Time.deltaTime);
 			pumpingWater = false;
 		}
     }
 
 	void PumpSpeedSettings()
 	{
-		// OPTIMALIZE!!!
-		if (pumpPercentage <= 10 && pumpSpeed > 20 && warningAbleToCall)
+        switch (pumpTimerSeconds)
         {
-			StartCoroutine(EnableWarning("Skimmer is pumping water!"));
-			pumpingWater = true;
-			warningAbleToCall = false;
-		}
-        else if (pumpPercentage > 10 && pumpPercentage <= 15)
-        {
-			if (pumpSpeed > 30 && warningAbleToCall)
-            {
-				StartCoroutine(EnableWarning("Skimmer is pumping water!"));
-				pumpingWater = true;
-				warningAbleToCall = false;
-            }
-        }
-		else if (pumpPercentage > 15 && pumpPercentage <= 20)
-		{
-			if (pumpSpeed > 40 && warningAbleToCall)
-			{
-				StartCoroutine(EnableWarning("Skimmer is pumping water!"));
-				pumpingWater = true;
-				warningAbleToCall = false;
-			}
-		}
-		else if (pumpPercentage > 20 && pumpPercentage <= 25)
-		{
-			if (pumpSpeed > 60 && warningAbleToCall)
-			{
-				StartCoroutine(EnableWarning("Skimmer is pumping water!"));
-				pumpingWater = true;
-				warningAbleToCall = false;
-			}
+			case 0: maxSpeed = 20; break;
+			case 8: maxSpeed = 30; break;
+			case 16: maxSpeed = 40; break;
+			case 24: maxSpeed = 60; break;
+			case 30: maxSpeed = 100; break;
 		}
 
-		else if (pumpPercentage > 75 && pumpPercentage <= 85)
-		{
-			if (pumpSpeed > 60 && warningAbleToCall)
+		if (pumpSpeed > maxSpeed)
+        {
+			if (warningAbleToCall)
 			{
-				StartCoroutine(EnableWarning("Skimmer is pumping water!"));
-				pumpingWater = true;
-				warningAbleToCall = false;
+				StartCoroutine(EnableWarning("Skimmer is pumping water!", "Cause: You are pumping too fast!"));
 			}
-		}
-		else if (pumpPercentage > 85 && pumpPercentage <= 90)
-		{
-			if (pumpSpeed > 40 && warningAbleToCall)
-			{
-				StartCoroutine(EnableWarning("Skimmer is pumping water!"));
-				pumpingWater = true;
-				warningAbleToCall = false;
-			}
-		}
-		else if (pumpPercentage > 90 && pumpPercentage <= 95)
-		{
-			if (pumpSpeed > 30 && warningAbleToCall)
-			{
-				StartCoroutine(EnableWarning("Skimmer is pumping water!"));
-				pumpingWater = true;
-				warningAbleToCall = false;
-			}
-		}
-		else if (pumpPercentage > 95 && pumpPercentage <= 100)
-		{
-			if (pumpSpeed > 20 && warningAbleToCall)
-			{
-				StartCoroutine(EnableWarning("Skimmer is pumping water!"));
-				pumpingWater = true;
-				warningAbleToCall = false;
+			pumpingWater = true;
+			warningAbleToCall = false;
+
+			speedDifference = pumpSpeed - maxSpeed;
+			if (speedDifference > 10)
+            {
+				pumpTimer = 0;
 			}
 		}
 	}
@@ -301,7 +279,7 @@ public class Pump : MonoBehaviour
 		// Oilpump process.
 		if (PumpedUpOil < startOilInWater)
 		{
-			if (pumpSpeed > 0)
+			if (pumpSpeed > 0 && pumpingOil)
 			{
 				runningPumped += Time.deltaTime;
 				if (runningPumped < 1.0f)
@@ -321,13 +299,43 @@ public class Pump : MonoBehaviour
 		}
 	}
 
+	void PumpOff()
+	{
+		pumpSpeed = 0;
+		pumpOn = false;
+		pumpingWater = false;
+		pumpingOil = false;
+		sliderManagerScript.DisableInteraction();
+		sensorOutputScript.StopFlow();
+		sensorPipeCanStart = true;
+		pumpTimer = 0;
+	}
+
 	void PumpWater()
     {
 		if (pumpingWater)
         {
 			float speedMultiplier = pumpSpeed * 2.777777777777778f;
 			waterPumped += Time.deltaTime * speedMultiplier;
+
+			// Set sensorpipe flow
+			float tempOilHeight = oilHeight * 10;
+			float temp = inlateGap - tempOilHeight;
+			if (temp > 0.5f || speedDifference > 10)
+			{
+				sensorOutputScript.AddWaterToFlow(1);
+				pumpingOil = false;
+			}
+			else
+			{
+				sensorOutputScript.AddWaterToFlow(0.5f);
+			}
         }
+        else
+		{
+			pumpingOil = true;
+			sensorOutputScript.AddWaterToFlow(0);
+		}
     }
 
 	// End game.
@@ -344,18 +352,21 @@ public class Pump : MonoBehaviour
 
 		oilLayer.SetActive(false);
 		PumpOff();
+		StopCoroutine(InlateGapSettings());
 
 		// To summary screen.
-		fadeImage.SetActive(true);
+		fadeImage.enabled = true;
 		animator.SetTrigger("FadeIn");
 
 		float tempWaterPumped = waterPumped / 100;
 
-		endTime = 60 * Mathf.Pow(1.1f, bestTime - currentTime);
+		endTimeScore = 60 * Mathf.Pow(1.1f, bestTime - currentTime);
 		endWaterScore = 40 * Mathf.Pow(1.05f, bestWaterScore - tempWaterPumped);
 
-		points = endTime + endWaterScore;
+		points = endTimeScore + endWaterScore;
 		points = Mathf.Clamp(points, 0, 100);
+		Debug.Log("TIME POINTS: " + endTimeScore);
+		Debug.Log("WATER POINTS: " + endWaterScore);
 
 		endTimerText.text = endTimeString;
 		endOilText.text = "Oil pumped: " + PumpedUpOil.ToString("000") + "L";

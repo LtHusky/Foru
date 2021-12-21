@@ -23,6 +23,11 @@ public class AnimationsManager : MonoBehaviour
         gameObject.GetComponent<Image>().enabled = false;
     }
 
+    public void EnableFadingImage()
+    {
+        gameObject.GetComponent<Image>().enabled = true;
+    }
+
     public void ToGame()
     {
         SceneManager.LoadScene("Game");

@@ -56,6 +56,7 @@ public class Pump : MonoBehaviour
 	float startOilHeight;
 
 	float currentTime;
+	float[] bestTimes = { 90, 90, 105, 110, 115 };
 	float bestTime = 70;
 	float endTimeScore;
 	string endTimeString;
@@ -97,10 +98,11 @@ public class Pump : MonoBehaviour
 	// Setup.
 	void Start()
 	{
-		// Randomize oil height
+		// Randomize oil height.
 		int randomIDX = UnityEngine.Random.Range(0, 4);
 		oilHeight = oilHeights[randomIDX];
 		startOilInWater = oilAmounts[randomIDX];
+		bestTime = bestTimes[randomIDX];
 
 		oilHolder.transform.localScale = new Vector3(oilLayer.transform.localScale.x, oilHeight, oilLayer.transform.localScale.z);
 		startOilHeight = oilHeight;
@@ -110,7 +112,7 @@ public class Pump : MonoBehaviour
 	void FixedUpdate()
 	{
 		TextUpdate();
-		StartCoroutine(InlateGapSettings());
+		InlateGapSettings();
 
 		// Activate oil pump.
 		if (pumpOn && inlateGap > 0)
@@ -120,20 +122,25 @@ public class Pump : MonoBehaviour
 
 			UpdateTimers();
 			Oilpump();
-			WaterSettings();
+			OilSettings();
 			PumpSpeedSettings();
 			PumpWater();
 
 			if (sensorPipeCanStart)
-            {
+			{
 				sensorOutputScript.StartFlow();
 				sensorPipeCanStart = false;
 			}
 			else if (pumpSpeed == 0)
-            {
+			{
 				sensorOutputScript.StopFlow();
 				sensorPipeCanStart = true;
 			}
+		}
+		else if (sensorPipeCanStart == false)
+        {
+			sensorOutputScript.StopFlow();
+			sensorPipeCanStart = true;
 		}
 	}
 
@@ -152,7 +159,7 @@ public class Pump : MonoBehaviour
 			contextText.text = context;
 			warningSign.SetActive(true);
 
-			yield return new WaitForSeconds(3);
+			yield return new WaitForSeconds(4);
 			warningSign.SetActive(false);
 			warningAbleToCall = true;
 		}
@@ -180,7 +187,7 @@ public class Pump : MonoBehaviour
 	}
 
 	// Game settings.
-	void WaterSettings()
+	void OilSettings()
 	{
 		// Calculate & set oil height.
 		oilHeightPercentage = 100 - pumpPercentage;
@@ -196,10 +203,8 @@ public class Pump : MonoBehaviour
 		}
 	}
 
-	IEnumerator InlateGapSettings()
+	void InlateGapSettings()
 	{
-		float tempHeight = oilHeight * 10;
-
 		inlateGap = wheelValue;
 		inlateGap *= 2.5f;
 
@@ -212,6 +217,8 @@ public class Pump : MonoBehaviour
 		floatPiece.transform.position = new Vector3(0, gameObject.transform.position.y + adjustment - 0.25f, gameObject.transform.position.z);
 
 		// Check inlate gap settings.
+		float tempHeight = oilHeight * 10;
+
 		if (inlateGap > 0.2f && inlateGap > tempHeight && pumpSpeed > 0)
         {
 			if (warningAbleToCall)
@@ -221,22 +228,14 @@ public class Pump : MonoBehaviour
 				warningAbleToCall = false;
 			}
 		}
-		else if (inlateGap <= 2 && pumpSpeed > 40 && inlateGap > 0)
+		else if (inlateGap <= 2 && inlateGap > 0 && pumpSpeed > 40)
 		{
-			if (warningAbleToCall)
-			{
-				StartCoroutine(EnableWarning("Skimmer is rising out of the water!", "Cause: You are pumping too fast."));
-				warningAbleToCall = false;
-			}
+			StartCoroutine(RiseSkimmer());
 
-			isAdjustingFloat = true;
-			PumpOff();
-			floatCol.center = new Vector3(0, 0, -0.5f);
-
-			yield return new WaitForSeconds(4);
-			sliderManagerScript.EnableInteraction();
-			isAdjustingFloat = false;
-
+		}
+		else if (inlateGap <= 1 && inlateGap > 0 && pumpSpeed > 20)
+        {
+			StartCoroutine(RiseSkimmer());
 		}
         else if (pumpSpeed == 0 || pumpingWater)
         {
@@ -244,6 +243,23 @@ public class Pump : MonoBehaviour
 			pumpingWater = false;
 		}
     }
+
+	IEnumerator RiseSkimmer()
+    {
+		if (warningAbleToCall)
+		{
+			StartCoroutine(EnableWarning("Skimmer is rising out of the water!", "Cause: You are pumping too fast."));
+			warningAbleToCall = false;
+		}
+
+		isAdjustingFloat = true;
+		PumpOff();
+		floatCol.center = new Vector3(0, 0, -0.5f);
+
+		yield return new WaitForSeconds(4);
+		sliderManagerScript.EnableInteraction();
+		isAdjustingFloat = false;
+	}
 
 	void PumpSpeedSettings()
 	{
@@ -342,8 +358,7 @@ public class Pump : MonoBehaviour
 	void EndGame()
     {
 		// End game.
-		PumpedUpOil = startOilInWater / 10;
-		oilHeight = 0.001f;
+		oilHeight = 0;
 		pumpPercentage = 100;
 
 		waterMatTM.material.shader = waterShader;
@@ -352,7 +367,6 @@ public class Pump : MonoBehaviour
 
 		oilLayer.SetActive(false);
 		PumpOff();
-		StopCoroutine(InlateGapSettings());
 
 		// To summary screen.
 		fadeImage.enabled = true;
@@ -361,7 +375,7 @@ public class Pump : MonoBehaviour
 		float tempWaterPumped = waterPumped / 100;
 
 		endTimeScore = 60 * Mathf.Pow(1.1f, bestTime - currentTime);
-		endWaterScore = 40 * Mathf.Pow(1.05f, bestWaterScore - tempWaterPumped);
+		endWaterScore = 40 * Mathf.Pow(1.04f, bestWaterScore - tempWaterPumped);
 
 		points = endTimeScore + endWaterScore;
 		points = Mathf.Clamp(points, 0, 100);

@@ -10,10 +10,16 @@ public class MainMenu : MonoBehaviour
     public GameObject fadeImage;
     public Animator mmAnimator;
 
+    // Fix timeScale for animation
+    private void Start()
+    {
+        Time.timeScale = 1;
+    }
+
     public void PlayGame()
     {
-        fadeImage.SetActive(true);
-        mmAnimator.SetTrigger("FadeInMM");
+        fadeImage.GetComponent<Image>().enabled = true;
+        mmAnimator.SetTrigger("ToFadeIn");
     }
 
     public void QuitGame()

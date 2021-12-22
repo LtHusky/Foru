@@ -32,6 +32,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     m_Floats:
+    - _ApplyOffset: 0
     - _BottomPos: -2
     - _BumpWaves: 0.1
     - _DEPTHFOG: 1
@@ -48,9 +49,9 @@ Material:
     - _Opacity: 0.6
     - _PixelsPerUnit: 100
     - _WaterDepth: 1.27
-    - _WaterHeight: 7.3873158
+    - _WaterHeight: 6
     - _WaterLineHeight: 1
-    - _WaterWidth: 50.832855
+    - _WaterWidth: 15
     - _WaveHeightScale: 0.5
     m_Colors:
     - _BaseColor: {r: 0.43106616, g: 0.60046196, b: 0.875, a: 0.829}
@@ -61,3 +62,4 @@ Material:
     - _InvFadeParemeter: {r: 4, g: 0.15, b: 0.5, a: 1}
     - _ShallowWaterColor: {r: 0.5058824, g: 0.60784316, b: 0.77254903, a: 1}
     - _WaterLineColor: {r: 1, g: 1, b: 1, a: 1}
+  m_BuildTextureStacks: []

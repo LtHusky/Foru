@@ -45,7 +45,7 @@ public class Pump : MonoBehaviour
 	float oilHeightSteps = 100;
 	float oilHeightPercentage = 100;
 
-	public MeshRenderer waterMatTM;
+	public MeshRenderer oilMatTM;
 	public Shader waterShader;
 
 	public Color endColor_Shallow;
@@ -361,11 +361,11 @@ public class Pump : MonoBehaviour
 		oilHeight = 0;
 		pumpPercentage = 100;
 
-		waterMatTM.material.shader = waterShader;
-		waterMatTM.material.SetColor("_DeepWaterColor", endColor_Deep);
-		waterMatTM.material.SetColor("_ShallowWaterColor", endColor_Shallow);
+		oilMatTM.material.shader = waterShader;
+		oilMatTM.material.SetColor("_DeepWaterColor", endColor_Deep);
+		oilMatTM.material.SetColor("_ShallowWaterColor", endColor_Shallow);
+		oilHolder.transform.localScale = new Vector3(1, 0.0001f, 1);
 
-		oilLayer.SetActive(false);
 		PumpOff();
 
 		// To summary screen.

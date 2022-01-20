@@ -9,7 +9,7 @@
 //
 //
 //
-//  --- What this Dose ---
+//  --- What this Does ---
 //
 //   -Rigidbody with "Buoyency" Component floats on "Water" Tagged body.
 //   -Check if Rigidbody is inside X - Z bound of Water body and gives force on Y Upwards.

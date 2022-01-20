@@ -12,7 +12,7 @@ public class WheelBehaviour : MonoBehaviour, IDragHandler, IPointerDownHandler, 
     float lastWheelAngle = 0f;
     Vector2 center;
 
-    public float maxSteerAngle = 200f;
+    public float maxSteerAngle;
     public float output;
 
     public GameObject skimmerWheel;
@@ -41,7 +41,9 @@ public class WheelBehaviour : MonoBehaviour, IDragHandler, IPointerDownHandler, 
         output++;
         pumpScript.wheelValue = output;
 
-        // Rotate Skimmer wheel
+        //flip wheel rotation!!! (Left: open, Right: close)
+
+        // Rotate Skimmer wheel obj
         skimmerWheel.transform.localRotation = Wheel.localRotation;
     }
 

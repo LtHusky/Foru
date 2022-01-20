@@ -19,19 +19,13 @@ public class MainMenu : MonoBehaviour
     public void PlayGame()
     {
         fadeImage.GetComponent<Image>().enabled = true;
-        mmAnimator.SetTrigger("ToFadeIn");
+        mmAnimator.SetTrigger("FadeIn");
     }
 
     public void QuitGame()
     {
         Application.Quit();
     }
-
-    public void MenuButton()
-    {
-        SceneManager.LoadScene("MainMenu");
-    }
-
 
     public void Pause()
     {

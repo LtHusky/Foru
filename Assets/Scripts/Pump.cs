@@ -21,7 +21,6 @@ public class Pump : MonoBehaviour
 	public float pumpSpeed = 0;
 	public float pumpPercentage;
 
-	float[] oilAmounts = { 2000, 2500, 3000, 3500, 4000 };
 	public float startOilInWater = 1000;
 	public float PumpedUpOil;
 
@@ -40,8 +39,7 @@ public class Pump : MonoBehaviour
 	public GameObject oilHolder;
 	public GameObject oilLayer;
 
-	float[] oilHeights = { 0.2f, 0.4f, 0.6f, 0.8f, 1f };
-	float oilHeight = 1;
+	public float oilHeight = 1;
 	float oilHeightSteps = 100;
 	float oilHeightPercentage = 100;
 
@@ -56,8 +54,7 @@ public class Pump : MonoBehaviour
 	float startOilHeight;
 
 	float currentTime;
-	float[] bestTimes = { 90, 90, 105, 110, 115 };
-	float bestTime = 70;
+	float bestTime = 115;
 	float endTimeScore;
 	string endTimeString;
 
@@ -93,19 +90,14 @@ public class Pump : MonoBehaviour
 	[Header("Other scripts")]
 	public SliderManager sliderManagerScript;
 	public SensorOutputManager sensorOutputScript;
+	public AnimationsManager animationManager;
 	bool sensorPipeCanStart = true;
 
-	// Setup.
-	void Start()
-	{
-		// Randomize oil height.
-		int randomIDX = UnityEngine.Random.Range(0, 4);
-		oilHeight = oilHeights[randomIDX];
-		startOilInWater = oilAmounts[randomIDX];
-		bestTime = bestTimes[randomIDX];
-
+	// Fixed start function; Apply main menu settings visually.
+	public void FixedStart()
+    {
 		oilHolder.transform.localScale = new Vector3(oilLayer.transform.localScale.x, oilHeight, oilLayer.transform.localScale.z);
-		startOilHeight = oilHeight;
+		startOilHeight = oilHeight; 
 		floatColOrigin = floatCol.center;
 	}
 
@@ -148,7 +140,7 @@ public class Pump : MonoBehaviour
 	public void SetSliderSpeed(float value)
 	{
 		pumpOn = true;
-		pumpSpeed = value;
+		pumpSpeed = (int)value / 10;
 	}
 
 	IEnumerator EnableWarning(string warning, string context)
@@ -169,7 +161,7 @@ public class Pump : MonoBehaviour
 	{
 		float tempThickness = oilHeight * 10;
 		oilLayerThicknessText.text = "Oil thickness: " + tempThickness.ToString("0.0") + "CM";
-		inlateGapText.text = "Inlate gap: " + inlateGap.ToString("0.0") + "CM";
+		inlateGapText.text = "Inlet gap: " + inlateGap.ToString("0.0") + "CM";
 		percentageText.text = (int)pumpPercentage + "%";
 		oilPercentageFillImage.fillAmount = pumpPercentage / 100;
 		pumpSpeedText.text = "Speed: " + pumpSpeed + " m3/h";
@@ -223,7 +215,7 @@ public class Pump : MonoBehaviour
         {
 			if (warningAbleToCall)
 			{
-				StartCoroutine(EnableWarning("Skimmer is pumping water!", "Cause: Inlate gap is too wide."));
+				StartCoroutine(EnableWarning("Skimmer is pumping water!", "Cause: Inlet gap is too wide."));
 				pumpingWater = true;
 				warningAbleToCall = false;
 			}
@@ -253,6 +245,7 @@ public class Pump : MonoBehaviour
 		}
 
 		isAdjustingFloat = true;
+		waterPumped += 100f;
 		PumpOff();
 		floatCol.center = new Vector3(0, 0, -0.5f);
 
@@ -371,6 +364,7 @@ public class Pump : MonoBehaviour
 		// To summary screen.
 		fadeImage.enabled = true;
 		animator.SetTrigger("FadeIn");
+		animationManager.EnableSummary();
 
 		float tempWaterPumped = waterPumped / 100;
 

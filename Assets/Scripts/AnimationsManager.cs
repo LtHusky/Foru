@@ -6,17 +6,9 @@ using UnityEngine.UI;
 
 public class AnimationsManager : MonoBehaviour
 {
-    public GameObject endScreen;
-
-    public void EnableSummaryMenu()
-    {
-        endScreen.SetActive(true);
-    }
-
-    public void DisableSummaryMenu()
-    {
-        endScreen.SetActive(false);
-    }
+    public GameObject mainMenuScreen;
+    public GameObject summaryScreen;
+    public PlayerControls pControls;
 
     public void DisableFadingImage()
     {
@@ -28,8 +20,30 @@ public class AnimationsManager : MonoBehaviour
         gameObject.GetComponent<Image>().enabled = true;
     }
 
-    public void ToGame()
+    public void EnableSummary()
     {
-        SceneManager.LoadScene("Game");
+        StartCoroutine(WaitTimer(1.5f, false, true));
+        pControls.ToggleControls();
+    }
+    public void DisableAll()
+    {
+        StartCoroutine(WaitTimer(1.5f, false, false));
+    }
+
+    public void EnableMainMenu()
+    {
+        StartCoroutine(WaitTimer(1.5f, true, false));
+    }
+
+    public IEnumerator WaitTimer(float seconds, bool mmBool, bool sumBool)
+    {
+        yield return new WaitForSeconds(seconds);
+        mainMenuScreen.SetActive(mmBool);
+        summaryScreen.SetActive(sumBool);
+    }
+
+    public void FixTimeScale()
+    {
+        Time.timeScale = 1;
     }
 }
